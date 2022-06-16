@@ -1,0 +1,77 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-auth
+spec:
+  basicAuth:
+    secret: authsecret
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authsecret
+data:
+  users: |
+      YmlwaW46JGFwcjEkZ1lZQ0ZHdEYkMloxT1FKUXYwMGtvSFBvM1pEMEhZMQoK
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik
+  namespace: default
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`traefik.pandeybipin.com.np`) 
+      kind: Rule
+      middlewares:
+        - name:  traefik-auth 
+      services:
+        - name: api@internal
+          kind: TraefikService
+  tls:    
+     certResolver: letsencrypt
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-redirect-scheme
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+    port: "443"
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-http
+  namespace: default
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`traefik.pandeybipin.com.np`)  
+      kind: Rule
+      middlewares:
+        - name: traefik-redirect-scheme
+        - name: traefik-add-prefix      
+      services:
+        - name: api@internal
+          kind: TraefikService
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-add-prefix
+spec:
+    replacePathRegex:
+      regex: /
+      replacement: /dashboard
+
+
